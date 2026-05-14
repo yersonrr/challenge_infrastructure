@@ -1,0 +1,18 @@
+terraform {
+  required_version = ">= 1.13.0"
+
+  # The S3 backend cannot reference Terraform variables.
+  backend "s3" {
+    bucket       = "challenge-terraform-states"
+    key          = "infra_app_url/staging/terraform.tfstate"
+    encrypt      = true
+    use_lockfile = true
+  }
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
