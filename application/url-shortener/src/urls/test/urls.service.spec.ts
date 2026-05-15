@@ -23,8 +23,10 @@ function createConfigServiceMock(
   const config: AppConfig = { ...baseAppConfig, ...overrides };
   return {
     get: jest.fn(
-      <K extends keyof AppConfig>(key: K, _options?: { infer: true }): AppConfig[K] =>
-        config[key],
+      <K extends keyof AppConfig>(
+        key: K,
+        _options?: { infer: true },
+      ): AppConfig[K] => config[key],
     ),
   } as unknown as ConfigService<AppConfig, true>;
 }
@@ -89,7 +91,9 @@ describe('UrlsService', () => {
         expiresInDays: 7,
       });
 
-      expect(result.expiresAt).toBeGreaterThanOrEqual(nowSeconds + 7 * 86_400 - 5);
+      expect(result.expiresAt).toBeGreaterThanOrEqual(
+        nowSeconds + 7 * 86_400 - 5,
+      );
     });
   });
 
@@ -103,7 +107,9 @@ describe('UrlsService', () => {
       });
       urlsRepository.deleteByShortCode.mockResolvedValue(undefined);
 
-      await expect(service.deleteByOwner('user-1', 'abc1234')).resolves.toBeUndefined();
+      await expect(
+        service.deleteByOwner('user-1', 'abc1234'),
+      ).resolves.toBeUndefined();
       expect(urlsRepository.deleteByShortCode).toHaveBeenCalledWith('abc1234');
     });
 
@@ -115,18 +121,18 @@ describe('UrlsService', () => {
         createdAt: new Date().toISOString(),
       });
 
-      await expect(service.deleteByOwner('user-1', 'abc1234')).rejects.toBeInstanceOf(
-        ForbiddenException,
-      );
+      await expect(
+        service.deleteByOwner('user-1', 'abc1234'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
       expect(urlsRepository.deleteByShortCode).not.toHaveBeenCalled();
     });
 
     it('returns not found when short code does not exist', async () => {
       urlsRepository.findByShortCode.mockResolvedValue(null);
 
-      await expect(service.deleteByOwner('user-1', 'missing')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.deleteByOwner('user-1', 'missing'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -159,9 +165,9 @@ describe('UrlsService', () => {
         createdAt: new Date().toISOString(),
       });
 
-      await expect(service.resolveForRedirect('unsafe1')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.resolveForRedirect('unsafe1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('returns gone when the link is expired', async () => {
@@ -173,9 +179,9 @@ describe('UrlsService', () => {
         expiresAt: Math.floor(Date.now() / 1000) - 60,
       });
 
-      await expect(service.resolveForRedirect('expired')).rejects.toBeInstanceOf(
-        GoneException,
-      );
+      await expect(
+        service.resolveForRedirect('expired'),
+      ).rejects.toBeInstanceOf(GoneException);
     });
   });
 

@@ -27,7 +27,9 @@ export class UrlsService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    const urlsTableName = this.configService.get('urlsTableName', { infer: true });
+    const urlsTableName = this.configService.get('urlsTableName', {
+      infer: true,
+    });
     if (!urlsTableName) {
       throw new Error('URLS_TABLE_NAME environment variable is required');
     }
@@ -115,9 +117,10 @@ export class UrlsService implements OnModuleInit {
 
   private randomShortCode(): string {
     const bytes = randomBytes(SHORT_CODE_LENGTH);
-    return Array.from(bytes, (byte) => SHORT_CODE_ALPHABET[byte % SHORT_CODE_ALPHABET.length]).join(
-      '',
-    );
+    return Array.from(
+      bytes,
+      (byte) => SHORT_CODE_ALPHABET[byte % SHORT_CODE_ALPHABET.length],
+    ).join('');
   }
 
   private isExpired(record: UrlRecord): boolean {
@@ -133,7 +136,9 @@ export class UrlsService implements OnModuleInit {
       longUrl: record.longUrl,
       ownerId: record.ownerId,
       createdAt: record.createdAt,
-      ...(record.expiresAt !== undefined ? { expiresAt: record.expiresAt } : {}),
+      ...(record.expiresAt !== undefined
+        ? { expiresAt: record.expiresAt }
+        : {}),
     };
   }
 }

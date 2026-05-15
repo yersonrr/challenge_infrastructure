@@ -18,7 +18,9 @@ export function assertSafeEmail(input: string): void {
   const normalized = normalizeSafeEmail(input);
 
   if (normalized.length > EMAIL_MAX_LENGTH) {
-    throw new UnsafeEmailError(`Email must not exceed ${EMAIL_MAX_LENGTH} characters`);
+    throw new UnsafeEmailError(
+      `Email must not exceed ${EMAIL_MAX_LENGTH} characters`,
+    );
   }
 
   if (/[\u0000-\u001F\u007F]/.test(input)) {
@@ -38,7 +40,11 @@ export function assertSafeEmail(input: string): void {
     throw new UnsafeEmailError('Email format is invalid');
   }
 
-  if (localPart.startsWith('.') || localPart.endsWith('.') || localPart.includes('..')) {
+  if (
+    localPart.startsWith('.') ||
+    localPart.endsWith('.') ||
+    localPart.includes('..')
+  ) {
     throw new UnsafeEmailError('Email local part is invalid');
   }
 

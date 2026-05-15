@@ -16,13 +16,18 @@ export class UnsafePasswordError extends Error {
   }
 }
 
-export function assertSafePassword(input: string, options: SafePasswordOptions = {}): void {
+export function assertSafePassword(
+  input: string,
+  options: SafePasswordOptions = {},
+): void {
   if (typeof input !== 'string') {
     throw new UnsafePasswordError('Password must be a string');
   }
 
   if (input !== input.trim()) {
-    throw new UnsafePasswordError('Password must not have leading or trailing whitespace');
+    throw new UnsafePasswordError(
+      'Password must not have leading or trailing whitespace',
+    );
   }
 
   if (/[\u0000-\u001F\u007F]/.test(input)) {
@@ -30,11 +35,15 @@ export function assertSafePassword(input: string, options: SafePasswordOptions =
   }
 
   if (input.length < PASSWORD_MIN_LENGTH) {
-    throw new UnsafePasswordError(`Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
+    throw new UnsafePasswordError(
+      `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+    );
   }
 
   if (input.length > PASSWORD_MAX_LENGTH) {
-    throw new UnsafePasswordError(`Password must not exceed ${PASSWORD_MAX_LENGTH} characters`);
+    throw new UnsafePasswordError(
+      `Password must not exceed ${PASSWORD_MAX_LENGTH} characters`,
+    );
   }
 
   if (options.requireComplexity) {
@@ -43,7 +52,9 @@ export function assertSafePassword(input: string, options: SafePasswordOptions =
     }
 
     if (!UPPERCASE_PATTERN.test(input)) {
-      throw new UnsafePasswordError('Password must include an uppercase letter');
+      throw new UnsafePasswordError(
+        'Password must include an uppercase letter',
+      );
     }
 
     if (!DIGIT_PATTERN.test(input)) {
@@ -52,7 +63,10 @@ export function assertSafePassword(input: string, options: SafePasswordOptions =
   }
 }
 
-export function isSafePassword(input: string, options: SafePasswordOptions = {}): boolean {
+export function isSafePassword(
+  input: string,
+  options: SafePasswordOptions = {},
+): boolean {
   try {
     assertSafePassword(input, options);
     return true;

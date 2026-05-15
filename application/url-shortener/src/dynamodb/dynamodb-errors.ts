@@ -9,13 +9,16 @@ export function isConditionalCheckFailed(error: unknown): boolean {
   );
 }
 
-export function isTransactionCanceledDueToConditionalCheck(error: unknown): boolean {
+export function isTransactionCanceledDueToConditionalCheck(
+  error: unknown,
+): boolean {
   if (!(error instanceof TransactionCanceledException)) {
     return false;
   }
 
   return (
-    error.CancellationReasons?.some((reason) => reason.Code === 'ConditionalCheckFailed') ??
-    false
+    error.CancellationReasons?.some(
+      (reason) => reason.Code === 'ConditionalCheckFailed',
+    ) ?? false
   );
 }

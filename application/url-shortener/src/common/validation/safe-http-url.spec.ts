@@ -1,9 +1,15 @@
-import { assertSafeHttpUrl, isSafeHttpUrl, normalizeSafeHttpUrl } from './safe-http-url';
+import {
+  assertSafeHttpUrl,
+  isSafeHttpUrl,
+  normalizeSafeHttpUrl,
+} from './safe-http-url';
 
 describe('safe-http-url', () => {
   it('accepts valid public https URLs', () => {
     expect(isSafeHttpUrl('https://example.com/path?q=1')).toBe(true);
-    expect(normalizeSafeHttpUrl('https://example.com/path')).toBe('https://example.com/path');
+    expect(normalizeSafeHttpUrl('https://example.com/path')).toBe(
+      'https://example.com/path',
+    );
   });
 
   it('rejects non-http(s) protocols', () => {
@@ -31,6 +37,8 @@ describe('safe-http-url', () => {
 
   it('rejects URLs that exceed max length', () => {
     const longPath = 'a'.repeat(2048);
-    expect(() => assertSafeHttpUrl(`https://example.com/${longPath}`)).toThrow();
+    expect(() =>
+      assertSafeHttpUrl(`https://example.com/${longPath}`),
+    ).toThrow();
   });
 });

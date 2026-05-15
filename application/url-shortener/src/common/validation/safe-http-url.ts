@@ -37,7 +37,9 @@ export function assertSafeHttpUrl(input: string): void {
   }
 
   if (trimmed.length > MAX_URL_LENGTH) {
-    throw new UnsafeHttpUrlError(`URL must not exceed ${MAX_URL_LENGTH} characters`);
+    throw new UnsafeHttpUrlError(
+      `URL must not exceed ${MAX_URL_LENGTH} characters`,
+    );
   }
 
   if (/[\u0000-\u001F\u007F]/.test(trimmed) || trimmed.includes('\\')) {
@@ -56,7 +58,9 @@ export function assertSafeHttpUrl(input: string): void {
   }
 
   if (parsed.username || parsed.password) {
-    throw new UnsafeHttpUrlError('URLs with embedded credentials are not allowed');
+    throw new UnsafeHttpUrlError(
+      'URLs with embedded credentials are not allowed',
+    );
   }
 
   const hostname = parsed.hostname.toLowerCase();
@@ -69,7 +73,9 @@ export function assertSafeHttpUrl(input: string): void {
   }
 
   if (isPrivateOrLocalAddress(hostname)) {
-    throw new UnsafeHttpUrlError('Private and local network URLs are not allowed');
+    throw new UnsafeHttpUrlError(
+      'Private and local network URLs are not allowed',
+    );
   }
 }
 
@@ -90,7 +96,12 @@ export function isSafeHttpUrl(input: string): boolean {
 function isPrivateOrLocalAddress(hostname: string): boolean {
   const lower = hostname.toLowerCase();
 
-  if (lower === '::1' || lower.startsWith('fe80:') || lower.startsWith('fc') || lower.startsWith('fd')) {
+  if (
+    lower === '::1' ||
+    lower.startsWith('fe80:') ||
+    lower.startsWith('fc') ||
+    lower.startsWith('fd')
+  ) {
     return true;
   }
 

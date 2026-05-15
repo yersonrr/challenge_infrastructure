@@ -7,7 +7,9 @@ describe('safe-password', () => {
   });
 
   it('requires complexity for signup-style validation', () => {
-    expect(isSafePassword('password123', { requireComplexity: true })).toBe(false);
+    expect(isSafePassword('password123', { requireComplexity: true })).toBe(
+      false,
+    );
     expect(isSafePassword('Password1', { requireComplexity: true })).toBe(true);
   });
 

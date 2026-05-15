@@ -6,7 +6,9 @@ import {
 
 describe('dynamodb-errors', () => {
   it('detects conditional check failures on put', () => {
-    expect(isConditionalCheckFailed({ name: 'ConditionalCheckFailedException' })).toBe(true);
+    expect(
+      isConditionalCheckFailed({ name: 'ConditionalCheckFailedException' }),
+    ).toBe(true);
     expect(isConditionalCheckFailed(new Error('other'))).toBe(false);
   });
 

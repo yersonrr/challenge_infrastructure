@@ -13,5 +13,6 @@ export default (): AppConfig => ({
   dbEndpoint: process.env.DB_ENDPOINT,
   usersTableName: process.env.USERS_TABLE_NAME ?? '',
   urlsTableName: process.env.URLS_TABLE_NAME ?? '',
-  awsRegion: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'eu-west-1',
+  awsRegion:
+    process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'eu-west-1',
 });

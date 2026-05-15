@@ -22,8 +22,10 @@ function createConfigServiceMock(
 
   return {
     get: jest.fn(
-      <K extends keyof AppConfig>(key: K, _options?: { infer: true }): AppConfig[K] =>
-        config[key],
+      <K extends keyof AppConfig>(
+        key: K,
+        _options?: { infer: true },
+      ): AppConfig[K] => config[key],
     ),
   } as unknown as ConfigService<AppConfig, true>;
 }
@@ -42,7 +44,9 @@ describe('UsersService', () => {
   let configService: ConfigService<AppConfig, true>;
   let service: UsersService;
 
-  const createService = (configOverrides: Partial<AppConfig> = {}): UsersService => {
+  const createService = (
+    configOverrides: Partial<AppConfig> = {},
+  ): UsersService => {
     configService = createConfigServiceMock(configOverrides);
     return new UsersService(
       usersRepository as unknown as UsersRepository,
@@ -104,7 +108,9 @@ describe('UsersService', () => {
         password: 'Password1',
       });
 
-      expect(usersRepository.findByEmail).toHaveBeenCalledWith('user@example.com');
+      expect(usersRepository.findByEmail).toHaveBeenCalledWith(
+        'user@example.com',
+      );
       expect(usersRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({ email: 'user@example.com' }),
       );
@@ -122,9 +128,9 @@ describe('UsersService', () => {
       const createdUser = usersRepository.create.mock.calls[0][0];
       expect(createdUser.passwordHash).not.toBe('Password1');
       expect(createdUser.passwordHash).toMatch(/^\$2[aby]\$/);
-      await expect(bcrypt.compare('Password1', createdUser.passwordHash)).resolves.toBe(
-        true,
-      );
+      await expect(
+        bcrypt.compare('Password1', createdUser.passwordHash),
+      ).resolves.toBe(true);
     });
 
     it('does not expose passwordHash in the response', async () => {
@@ -209,7 +215,9 @@ describe('UsersService', () => {
         password: 'Password1',
       });
 
-      expect(usersRepository.findByEmail).toHaveBeenCalledWith('user@example.com');
+      expect(usersRepository.findByEmail).toHaveBeenCalledWith(
+        'user@example.com',
+      );
     });
 
     it('rejects unknown email', async () => {
