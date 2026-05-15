@@ -68,6 +68,30 @@ variable "apprunner_max_size" {
   default     = 5
 }
 
+variable "apprunner_max_concurrency" {
+  description = "Max concurrent requests per App Runner instance before scaling out."
+  type        = number
+  default     = 100
+}
+
+variable "monitoring_log_retention_days" {
+  description = "CloudWatch log retention for monitoring module log groups."
+  type        = number
+  default     = 14
+}
+
+variable "monitoring_enable_sns" {
+  description = "Create SNS topic for CloudWatch alarm notifications."
+  type        = bool
+  default     = true
+}
+
+variable "monitoring_alarm_emails" {
+  description = "Emails to subscribe to the alarm SNS topic (each must confirm)."
+  type        = list(string)
+  default     = []
+}
+
 variable "waf_rate_limit" {
   description = "WAF rate limit: max requests per IP per 5-minute window."
   type        = number

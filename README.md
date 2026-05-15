@@ -50,6 +50,7 @@ Variable files (`*.tfvars`) are ignored by git; keep `env_secret_manager_arn` an
 | `ecr` | Container registry, scan-on-push, lifecycle (keep 10 images), optional CI IAM policy |
 | `apprunner` | Public NestJS service, ECR image, auto scaling, VPC connector, IAM, Secrets Manager config |
 | `security` | Regional WAF on App Runner: rate limit (100 req / 5 min / IP default), IP reputation, optional bot control, logging, auditor IAM |
+| `monitoring` | CloudWatch log groups, App Runner alarms (5xx spike & error rate, latency p99, concurrency, instances at max, CPU), dashboard, optional SNS |
 | `iam_github` | GitHub OIDC provider, OIDC roles, Terraform deployment role (AssumeRole chain), scoped ECR push role |
 
 ## GitHub Actions (OIDC)
@@ -80,6 +81,11 @@ terraform output terraform_deployment_role_arn
 ```
 
 Repeat in `infrastructure/environments/production` — the ARNs will differ (roles are named `challenge-staging-*` vs `challenge-production-*`).
+
+### Pull request CI
+
+- **`pr-application.yml`** — on PRs that touch `application/**`, runs Prettier check and Jest.
+- **`pr-infrastructure.yml`** — on PRs that touch `infrastructure/**`, runs `terraform fmt -check` (recursive) and `terraform validate` in both `environments/staging` and `environments/production`.
 
 ### Role summary
 

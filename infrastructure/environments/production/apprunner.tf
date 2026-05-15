@@ -16,6 +16,7 @@ module "apprunner" {
 
   dynamodb_table_arns = values(module.db.table_arns)
 
-  min_size = var.apprunner_min_size
-  max_size = var.apprunner_max_size
+  min_size        = var.apprunner_min_size
+  max_size        = var.apprunner_max_size
+  max_concurrency = var.apprunner_max_concurrency
 }

@@ -77,3 +77,18 @@ output "github_ecr_oidc_role_arn" {
   description = "GitHub OIDC role ARN for ECR image push."
   value       = module.iam_github.github_ecr_oidc_role_arn
 }
+
+output "cloudwatch_dashboard_name" {
+  description = "CloudWatch dashboard name for URL shortener App Runner observability."
+  value       = module.monitoring.dashboard_name
+}
+
+output "monitoring_sns_alarm_topic_arn" {
+  description = "SNS topic for CloudWatch alarms, or empty if disabled."
+  value       = module.monitoring.sns_topic_arn
+}
+
+output "monitoring_application_log_group" {
+  description = "Log group intended for NestJS / application logs (wire App Runner when enabled)."
+  value       = module.monitoring.application_log_group_name
+}

@@ -2,5 +2,8 @@ role_arn               = "arn:aws:iam::ACCOUNT_ID:role/YourTerraformRole"
 env_secret_manager_arn = "arn:aws:secretsmanager:eu-west-1:ACCOUNT_ID:secret:challenge/staging/app-config-AbCdEf"
 github_repository      = "org/challenge_infrastructure"
 
-# Optional
-# app_image_tag = "latest"
+# Optional App Runner / monitoring
+# apprunner_max_concurrency = 100
+# monitoring_log_retention_days = 14
+# monitoring_enable_sns     = true
+# monitoring_alarm_emails   = ["ops@example.com"]

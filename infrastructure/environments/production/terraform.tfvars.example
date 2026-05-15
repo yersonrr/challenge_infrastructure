@@ -1,7 +1,13 @@
 role_arn               = "arn:aws:iam::ACCOUNT_ID:role/YourTerraformRole"
 backend_storage_s3     = "your-terraform-state-bucket"
 env_secret_manager_arn = "arn:aws:secretsmanager:eu-west-1:ACCOUNT_ID:secret:challenge/production/app-config-AbCdEf"
-github_repository      = "your-org/challenge_infrastructure"
+github_repository      = "org/challenge_infrastructure"
 
 # Optional
 # app_image_tag = "latest"
+
+# Optional App Runner / monitoring
+# apprunner_max_concurrency = 100
+# monitoring_log_retention_days = 30
+# monitoring_enable_sns     = true
+# monitoring_alarm_emails   = ["ops@example.com"]

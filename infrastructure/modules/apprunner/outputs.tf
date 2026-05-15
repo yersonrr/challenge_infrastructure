@@ -13,6 +13,11 @@ output "service_id" {
   value       = aws_apprunner_service.api.id
 }
 
+output "service_name" {
+  description = "App Runner service name (CloudWatch dimension ServiceName)."
+  value       = aws_apprunner_service.api.service_name
+}
+
 output "vpc_connector_arn" {
   description = "ARN of the VPC connector, or null if disabled."
   value       = var.enable_vpc_connector ? aws_apprunner_vpc_connector.main[0].arn : null

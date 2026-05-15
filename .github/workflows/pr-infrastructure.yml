@@ -1,0 +1,38 @@
+name: Pull request — Infrastructure
+
+on:
+  pull_request:
+    paths:
+      - 'infrastructure/**'
+      - '.github/workflows/pr-infrastructure.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.0
+
+      - name: Terraform format
+        run: terraform fmt -check -recursive "${GITHUB_WORKSPACE}/infrastructure"
+
+      - name: Validate staging
+        working-directory: infrastructure/environments/staging
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+      - name: Validate production
+        working-directory: infrastructure/environments/production
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate

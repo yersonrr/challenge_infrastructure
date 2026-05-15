@@ -252,6 +252,54 @@ data "aws_iam_policy_document" "terraform_deploy" {
     ]
     resources = [
       "arn:aws:logs:${var.region}:${local.account_id}:log-group:/aws/waf/${var.name}-${var.environment}*",
+      "arn:aws:logs:${var.region}:${local.account_id}:log-group:/application/${local.resource_prefix}*",
+    ]
+  }
+
+  statement {
+    sid    = "ProjectMonitoringCloudWatch"
+    effect = "Allow"
+    actions = [
+      "cloudwatch:PutDashboard",
+      "cloudwatch:GetDashboard",
+      "cloudwatch:DeleteDashboards",
+      "cloudwatch:ListDashboards",
+      "cloudwatch:PutMetricAlarm",
+      "cloudwatch:DeleteAlarms",
+      "cloudwatch:DescribeAlarms",
+      "cloudwatch:DescribeAlarmHistory",
+      "cloudwatch:SetAlarmState",
+      "cloudwatch:TagResource",
+      "cloudwatch:UntagResource",
+      "cloudwatch:ListTagsForResource",
+      "cloudwatch:DisableAlarmActions",
+      "cloudwatch:EnableAlarmActions",
+    ]
+    resources = [
+      "arn:aws:cloudwatch:${var.region}:${local.account_id}:dashboard/${local.resource_prefix}-*",
+      "arn:aws:cloudwatch:${var.region}:${local.account_id}:alarm:${local.resource_prefix}-*",
+    ]
+  }
+
+  statement {
+    sid    = "ProjectMonitoringSNS"
+    effect = "Allow"
+    actions = [
+      "sns:CreateTopic",
+      "sns:DeleteTopic",
+      "sns:GetTopicAttributes",
+      "sns:SetTopicAttributes",
+      "sns:TagResource",
+      "sns:UntagResource",
+      "sns:ListTagsForResource",
+      "sns:Subscribe",
+      "sns:Unsubscribe",
+      "sns:GetSubscriptionAttributes",
+      "sns:ListSubscriptionsByTopic",
+      "sns:ConfirmSubscription",
+    ]
+    resources = [
+      "arn:aws:sns:${var.region}:${local.account_id}:${local.resource_prefix}-*",
     ]
   }
 
