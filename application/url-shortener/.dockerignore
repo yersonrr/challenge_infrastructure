@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+coverage
+.git
+.gitignore
+.env
+.env.*
+*.md
+test
+**/*.spec.ts
+**/*.e2e-spec.ts
+.vscode
+.idea
+.DS_Store
+npm-debug.log*
+pnpm-debug.log*
