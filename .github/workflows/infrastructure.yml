@@ -1,0 +1,112 @@
+name: Infrastructure
+
+on:
+  push:
+    branches:
+      - staging
+      - production
+    paths:
+      - 'infrastructure/**'
+      - '.github/workflows/infrastructure.yml'
+      - '.github/workflows/infra-deploy.yml'
+
+concurrency:
+  group: infrastructure-${{ github.ref_name }}-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  resolve-config:
+    name: Resolve ${{ github.ref_name }} configuration
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.config.outputs.environment }}
+      aws_region: ${{ steps.config.outputs.aws_region }}
+      github_terraform_oidc_role_arn: ${{ steps.config.outputs.github_terraform_oidc_role_arn }}
+      terraform_deployment_role_arn: ${{ steps.config.outputs.terraform_deployment_role_arn }}
+      terraform_directory: ${{ steps.config.outputs.terraform_directory }}
+    steps:
+      - name: Map repository variables to deployment inputs
+        id: config
+        env:
+          BRANCH: ${{ github.ref_name }}
+          STAGING_GITHUB_TERRAFORM_OIDC_ROLE_ARN: ${{ vars.STAGING_GITHUB_TERRAFORM_OIDC_ROLE_ARN }}
+          STAGING_TERRAFORM_DEPLOYMENT_ROLE_ARN: ${{ vars.STAGING_TERRAFORM_DEPLOYMENT_ROLE_ARN }}
+          STAGING_AWS_REGION: ${{ vars.STAGING_AWS_REGION }}
+          PRODUCTION_GITHUB_TERRAFORM_OIDC_ROLE_ARN: ${{ vars.PRODUCTION_GITHUB_TERRAFORM_OIDC_ROLE_ARN }}
+          PRODUCTION_TERRAFORM_DEPLOYMENT_ROLE_ARN: ${{ vars.PRODUCTION_TERRAFORM_DEPLOYMENT_ROLE_ARN }}
+          PRODUCTION_AWS_REGION: ${{ vars.PRODUCTION_AWS_REGION }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+        run: |
+          set -euo pipefail
+
+          require_var() {
+            local name="$1"
+            local value="$2"
+            if [ -z "${value}" ]; then
+              echo "Missing required repository variable: ${name}"
+              exit 1
+            fi
+          }
+
+          case "${BRANCH}" in
+            staging)
+              require_var STAGING_GITHUB_TERRAFORM_OIDC_ROLE_ARN "${STAGING_GITHUB_TERRAFORM_OIDC_ROLE_ARN}"
+              require_var STAGING_TERRAFORM_DEPLOYMENT_ROLE_ARN "${STAGING_TERRAFORM_DEPLOYMENT_ROLE_ARN}"
+
+              aws_region="${STAGING_AWS_REGION:-${AWS_REGION:-eu-west-1}}"
+
+              {
+                echo "environment=staging"
+                echo "aws_region=${aws_region}"
+                echo "github_terraform_oidc_role_arn=${STAGING_GITHUB_TERRAFORM_OIDC_ROLE_ARN}"
+                echo "terraform_deployment_role_arn=${STAGING_TERRAFORM_DEPLOYMENT_ROLE_ARN}"
+                echo "terraform_directory=infrastructure/environments/staging"
+              } >> "${GITHUB_OUTPUT}"
+              ;;
+            production)
+              require_var PRODUCTION_GITHUB_TERRAFORM_OIDC_ROLE_ARN "${PRODUCTION_GITHUB_TERRAFORM_OIDC_ROLE_ARN}"
+              require_var PRODUCTION_TERRAFORM_DEPLOYMENT_ROLE_ARN "${PRODUCTION_TERRAFORM_DEPLOYMENT_ROLE_ARN}"
+
+              aws_region="${PRODUCTION_AWS_REGION:-${AWS_REGION:-eu-west-1}}"
+
+              {
+                echo "environment=production"
+                echo "aws_region=${aws_region}"
+                echo "github_terraform_oidc_role_arn=${PRODUCTION_GITHUB_TERRAFORM_OIDC_ROLE_ARN}"
+                echo "terraform_deployment_role_arn=${PRODUCTION_TERRAFORM_DEPLOYMENT_ROLE_ARN}"
+                echo "terraform_directory=infrastructure/environments/production"
+              } >> "${GITHUB_OUTPUT}"
+              ;;
+            *)
+              echo "Unsupported branch: ${BRANCH}"
+              exit 1
+              ;;
+          esac
+
+  infrastructure-staging:
+    name: Infrastructure pipeline (staging)
+    if: github.ref_name == 'staging'
+    needs: resolve-config
+    uses: ./.github/workflows/infra-deploy.yml
+    with:
+      environment: ${{ needs.resolve-config.outputs.environment }}
+      aws_region: ${{ needs.resolve-config.outputs.aws_region }}
+      github_terraform_oidc_role_arn: ${{ needs.resolve-config.outputs.github_terraform_oidc_role_arn }}
+      terraform_deployment_role_arn: ${{ needs.resolve-config.outputs.terraform_deployment_role_arn }}
+      terraform_directory: ${{ needs.resolve-config.outputs.terraform_directory }}
+    secrets:
+      terraform_tfvars: ${{ secrets.STAGING_TERRAFORM_TFVARS }}
+
+  infrastructure-production:
+    name: Infrastructure pipeline (production)
+    if: github.ref_name == 'production'
+    needs: resolve-config
+    uses: ./.github/workflows/infra-deploy.yml
+    with:
+      environment: ${{ needs.resolve-config.outputs.environment }}
+      aws_region: ${{ needs.resolve-config.outputs.aws_region }}
+      github_terraform_oidc_role_arn: ${{ needs.resolve-config.outputs.github_terraform_oidc_role_arn }}
+      terraform_deployment_role_arn: ${{ needs.resolve-config.outputs.terraform_deployment_role_arn }}
+      terraform_directory: ${{ needs.resolve-config.outputs.terraform_directory }}
+    secrets:
+      terraform_tfvars: ${{ secrets.PRODUCTION_TERRAFORM_TFVARS }}

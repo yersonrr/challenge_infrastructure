@@ -1,0 +1,159 @@
+name: Infrastructure (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Deployment target (staging or production).
+        required: true
+        type: string
+      aws_region:
+        description: AWS region for Terraform and the state backend.
+        required: true
+        type: string
+      github_terraform_oidc_role_arn:
+        description: GitHub OIDC role that may assume the Terraform deployment role.
+        required: true
+        type: string
+      terraform_deployment_role_arn:
+        description: IAM role ARN used to run terraform plan/apply.
+        required: true
+        type: string
+      terraform_directory:
+        description: Path to the Terraform environment root (e.g. infrastructure/environments/staging).
+        required: true
+        type: string
+    secrets:
+      terraform_tfvars:
+        description: Contents of terraform.tfvars for this environment (not committed to git).
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform-validate:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.terraform_directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.0
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive "${GITHUB_WORKSPACE}/infrastructure"
+
+      - name: Terraform init
+        run: terraform init -backend=false -input=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+  terraform-plan:
+    name: Terraform plan
+    needs: terraform-validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.terraform_directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.0
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.github_terraform_oidc_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Assume Terraform deployment role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.terraform_deployment_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+          role-chaining: true
+
+      - name: Write terraform.tfvars
+        env:
+          TFVARS: ${{ secrets.terraform_tfvars }}
+        run: printf '%s\n' "${TFVARS}" > terraform.tfvars
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan -no-color | tee plan.txt
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ inputs.environment }}-${{ github.run_id }}
+          path: |
+            ${{ inputs.terraform_directory }}/tfplan
+            ${{ inputs.terraform_directory }}/plan.txt
+          retention-days: 7
+
+  terraform-apply:
+    name: Terraform apply
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.terraform_directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.0
+          terraform_wrapper: false
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-${{ inputs.environment }}-${{ github.run_id }}
+          path: ${{ inputs.terraform_directory }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.github_terraform_oidc_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Assume Terraform deployment role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.terraform_deployment_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+          role-chaining: true
+
+      - name: Write terraform.tfvars
+        env:
+          TFVARS: ${{ secrets.terraform_tfvars }}
+        run: printf '%s\n' "${TFVARS}" > terraform.tfvars
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Show plan for reviewers
+        run: terraform show -no-color tfplan | tee apply-plan.txt
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve tfplan

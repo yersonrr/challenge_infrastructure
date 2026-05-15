@@ -8,7 +8,7 @@ on:
     paths:
       - 'application/**'
       - '.github/workflows/application.yml'
-      - '.github/workflows/application-reusable.yml'
+      - '.github/workflows/app-deploy.yml'
 
 concurrency:
   group: application-${{ github.ref_name }}-${{ github.workflow }}

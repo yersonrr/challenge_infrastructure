@@ -118,12 +118,11 @@ OIDC trust for each role also includes `repo:ORG/REPO:environment:staging` or `e
 
 Runs on pushes to **`staging`** or **`production`** when files under `application/` change. The caller workflow maps **repository variables** by branch, then invokes the reusable workflow with explicit inputs.
 
-1. **resolve-config** — selects `STAGING_*` or `PRODUCTION_*` vars from the branch name
-2. **Test and Prettier** — `pnpm test` and `pnpm run format:check`
-3. **Deploy** — build/push Docker image to ECR (`latest` + commit SHA tags)
-4. **App Runner** — `start-deployment`, wait for success, `GET /health`
+1. **Test and Prettier**: `pnpm test` and `pnpm run format:check`
+2. **Deploy**: build/push Docker image to ECR (`latest` + commit SHA tags)
+4. **App Runner**: `start-deployment`, wait for success, `GET /health`
 
-Set these as **repository variables** (Settings → Secrets and variables → Actions → Variables):
+Set these as **repository variables** (Settings -> Secrets and variables -> Actions -> Variables):
 
 | Repository variable | Terraform output (staging folder) | Terraform output (production folder) |
 |---------------------|-----------------------------------|--------------------------------------|
@@ -141,6 +140,52 @@ Optional fallback for region: `AWS_REGION` (used when `STAGING_AWS_REGION` / `PR
 The deploy job still sets `environment: staging` or `production` for GitHub Environment protection rules and OIDC `environment:` claims.
 
 After updating IAM (App Runner deploy permissions on the ECR OIDC role), run `terraform apply` in that environment.
+
+### Infrastructure workflow (`infrastructure.yml` → `infra-deploy.yml`)
+
+Runs on pushes to **`staging`** or **`production`** when files under `infrastructure/` change:
+
+1. **Terraform validate**: `terraform fmt -check`, `init -backend=false`, `validate`
+2. **Terraform plan**: OIDC deployment role chain, `plan`, upload plan artifact
+3. **Terraform apply**: Requires **manual approval** (GitHub Environment), then `apply` the saved plan
+
+#### Manual approval before apply
+
+GitHub does not approve individual steps; it gates **jobs** via [Environment protection rules](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#deployment-protection-rules).
+
+1. In the repo: **Settings -> Environments** -> open `staging` and/or `production` (same names the workflow uses).
+2. Enable **Required reviewers** and add people/teams who may approve applies.
+3. Optional: **Wait timer**, **Deployment branches** (limit to `staging` / `production`).
+
+After **plan** finishes, the **apply** job shows *Review pending deployment* until a reviewer approves. Reviewers can read the `plan.txt` artifact from the plan job before approving.
+
+Use stricter rules on `production` (required reviewers) and none on `staging` if you want staging to apply automatically.
+
+**Repository variables** (from `terraform output` in each environment folder):
+
+| Repository variable | Terraform output |
+|---------------------|------------------|
+| `STAGING_GITHUB_TERRAFORM_OIDC_ROLE_ARN` | `github_terraform_oidc_role_arn` |
+| `STAGING_TERRAFORM_DEPLOYMENT_ROLE_ARN` | `terraform_deployment_role_arn` |
+| `PRODUCTION_GITHUB_TERRAFORM_OIDC_ROLE_ARN` | `github_terraform_oidc_role_arn` |
+| `PRODUCTION_TERRAFORM_DEPLOYMENT_ROLE_ARN` | `terraform_deployment_role_arn` |
+
+Optional: `STAGING_AWS_REGION`, `PRODUCTION_AWS_REGION`, or shared `AWS_REGION`.
+
+**Repository secrets** (full contents of your local `terraform.tfvars`, which is gitignored):
+
+| Secret | Used when branch is |
+|--------|---------------------|
+| `STAGING_TERRAFORM_TFVARS` | `staging` |
+| `PRODUCTION_TERRAFORM_TFVARS` | `production` |
+
+Example secret value (staging):
+
+```hcl
+role_arn               = "arn:aws:iam::ACCOUNT_ID:role/YourTerraformRole"
+env_secret_manager_arn = "arn:aws:secretsmanager:eu-west-1:ACCOUNT_ID:secret:..."
+github_repository      = "org/challenge_infrastructure"
+```
 
 ### Pre-commit
 
