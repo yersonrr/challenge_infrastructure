@@ -1,3 +1,9 @@
+variable "project_name" {
+  description = "Short name used as a prefix for network and other shared resources."
+  type        = string
+  default     = "challenge"
+}
+
 variable "region" {
   description = "AWS region for the provider. Use the same value as backend \"region\" (see backend.hcl.example)."
   type        = string

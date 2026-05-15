@@ -2,6 +2,7 @@ terraform {
   required_version = ">= 1.13.0"
 
   # The S3 backend cannot reference Terraform variables.
+  # So using variable.bucket or variable.key returns errors.
   backend "s3" {
     bucket       = "challenge-terraform-states"
     key          = "infra_app_url/staging/terraform.tfstate"

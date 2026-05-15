@@ -1,13 +1,15 @@
+variable "project_name" {
+  description = "Short name used as a prefix for network and other shared resources."
+  type        = string
+  default     = "challenge"
+}
+
 variable "region" {
-  description = "AWS region for the provider. Use the same value as backend \"region\" (see backend.hcl.example)."
+  description = "AWS region for the provider. Use the same value as backend region."
   type        = string
   default     = "eu-west-1"
 }
 
-variable "backend_storage_s3" {
-  description = "S3 bucket name for Terraform state. The backend block cannot read variables; set the same name as backend \"bucket\" in backend.hcl."
-  type        = string
-}
 
 variable "environment" {
   description = "Environment label; matches the path segment under infra_app_url/ in the remote state key."
