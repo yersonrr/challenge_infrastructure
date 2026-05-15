@@ -1,0 +1,99 @@
+name: Application
+
+on:
+  push:
+    branches:
+      - staging
+      - production
+    paths:
+      - 'application/**'
+      - '.github/workflows/application.yml'
+      - '.github/workflows/application-reusable.yml'
+
+concurrency:
+  group: application-${{ github.ref_name }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  resolve-config:
+    name: Resolve ${{ github.ref_name }} configuration
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.config.outputs.environment }}
+      aws_region: ${{ steps.config.outputs.aws_region }}
+      github_ecr_role_arn: ${{ steps.config.outputs.github_ecr_role_arn }}
+      ecr_repository_url: ${{ steps.config.outputs.ecr_repository_url }}
+      apprunner_service_arn: ${{ steps.config.outputs.apprunner_service_arn }}
+    steps:
+      - name: Map repository variables to deployment inputs
+        id: config
+        env:
+          BRANCH: ${{ github.ref_name }}
+          STAGING_GITHUB_ECR_ROLE_ARN: ${{ vars.STAGING_GITHUB_ECR_ROLE_ARN }}
+          STAGING_ECR_REPOSITORY_URL: ${{ vars.STAGING_ECR_REPOSITORY_URL }}
+          STAGING_APPRUNNER_SERVICE_ARN: ${{ vars.STAGING_APPRUNNER_SERVICE_ARN }}
+          STAGING_AWS_REGION: ${{ vars.STAGING_AWS_REGION }}
+          PRODUCTION_GITHUB_ECR_ROLE_ARN: ${{ vars.PRODUCTION_GITHUB_ECR_ROLE_ARN }}
+          PRODUCTION_ECR_REPOSITORY_URL: ${{ vars.PRODUCTION_ECR_REPOSITORY_URL }}
+          PRODUCTION_APPRUNNER_SERVICE_ARN: ${{ vars.PRODUCTION_APPRUNNER_SERVICE_ARN }}
+          PRODUCTION_AWS_REGION: ${{ vars.PRODUCTION_AWS_REGION }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+        run: |
+          set -euo pipefail
+
+          require_var() {
+            local name="$1"
+            local value="$2"
+            if [ -z "${value}" ]; then
+              echo "Missing required repository variable: ${name}"
+              exit 1
+            fi
+          }
+
+          case "${BRANCH}" in
+            staging)
+              require_var STAGING_GITHUB_ECR_ROLE_ARN "${STAGING_GITHUB_ECR_ROLE_ARN}"
+              require_var STAGING_ECR_REPOSITORY_URL "${STAGING_ECR_REPOSITORY_URL}"
+              require_var STAGING_APPRUNNER_SERVICE_ARN "${STAGING_APPRUNNER_SERVICE_ARN}"
+
+              aws_region="${STAGING_AWS_REGION:-${AWS_REGION:-eu-west-1}}"
+
+              {
+                echo "environment=staging"
+                echo "aws_region=${aws_region}"
+                echo "github_ecr_role_arn=${STAGING_GITHUB_ECR_ROLE_ARN}"
+                echo "ecr_repository_url=${STAGING_ECR_REPOSITORY_URL}"
+                echo "apprunner_service_arn=${STAGING_APPRUNNER_SERVICE_ARN}"
+              } >> "${GITHUB_OUTPUT}"
+              ;;
+            production)
+              require_var PRODUCTION_GITHUB_ECR_ROLE_ARN "${PRODUCTION_GITHUB_ECR_ROLE_ARN}"
+              require_var PRODUCTION_ECR_REPOSITORY_URL "${PRODUCTION_ECR_REPOSITORY_URL}"
+              require_var PRODUCTION_APPRUNNER_SERVICE_ARN "${PRODUCTION_APPRUNNER_SERVICE_ARN}"
+
+              aws_region="${PRODUCTION_AWS_REGION:-${AWS_REGION:-eu-west-1}}"
+
+              {
+                echo "environment=production"
+                echo "aws_region=${aws_region}"
+                echo "github_ecr_role_arn=${PRODUCTION_GITHUB_ECR_ROLE_ARN}"
+                echo "ecr_repository_url=${PRODUCTION_ECR_REPOSITORY_URL}"
+                echo "apprunner_service_arn=${PRODUCTION_APPRUNNER_SERVICE_ARN}"
+              } >> "${GITHUB_OUTPUT}"
+              ;;
+            *)
+              echo "Unsupported branch: ${BRANCH}"
+              exit 1
+              ;;
+          esac
+
+  application:
+    name: Application pipeline (${{ github.ref_name }})
+    needs: resolve-config
+    uses: ./.github/workflows/app-deploy.yml
+    with:
+      environment: ${{ needs.resolve-config.outputs.environment }}
+      aws_region: ${{ needs.resolve-config.outputs.aws_region }}
+      github_ecr_role_arn: ${{ needs.resolve-config.outputs.github_ecr_role_arn }}
+      ecr_repository_url: ${{ needs.resolve-config.outputs.ecr_repository_url }}
+      apprunner_service_arn: ${{ needs.resolve-config.outputs.apprunner_service_arn }}

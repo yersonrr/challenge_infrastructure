@@ -1,0 +1,125 @@
+name: Application (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Deployment target (staging or production).
+        required: true
+        type: string
+      aws_region:
+        description: AWS region for ECR and App Runner.
+        required: true
+        type: string
+      github_ecr_role_arn:
+        description: IAM role ARN for GitHub OIDC (ECR push and App Runner deploy).
+        required: true
+        type: string
+      ecr_repository_url:
+        description: ECR repository URL without tag.
+        required: true
+        type: string
+      apprunner_service_arn:
+        description: App Runner service ARN to deploy and verify.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test-and-format:
+    name: Test and Prettier
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: application/url-shortener
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: application/url-shortener/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prettier
+        run: pnpm run format:check
+
+      - name: Unit tests
+        run: pnpm test
+
+  deploy:
+    name: Deploy to ECR and verify App Runner
+    needs: test-and-format
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: application/url-shortener
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.github_ecr_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REPOSITORY_URL: ${{ inputs.ecr_repository_url }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --tag "${ECR_REPOSITORY_URL}:${IMAGE_TAG}" \
+            --tag "${ECR_REPOSITORY_URL}:latest" \
+            .
+          docker push "${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
+          docker push "${ECR_REPOSITORY_URL}:latest"
+
+      - name: Start App Runner deployment
+        id: apprunner-deploy
+        env:
+          APPRUNNER_SERVICE_ARN: ${{ inputs.apprunner_service_arn }}
+        run: |
+          operation_id="$(aws apprunner start-deployment \
+            --service-arn "${APPRUNNER_SERVICE_ARN}" \
+            --query 'OperationId' \
+            --output text)"
+          echo "operation_id=${operation_id}" >> "${GITHUB_OUTPUT}"
+
+      - name: Wait for App Runner deployment
+        env:
+          APPRUNNER_SERVICE_ARN: ${{ inputs.apprunner_service_arn }}
+          OPERATION_ID: ${{ steps.apprunner-deploy.outputs.operation_id }}
+        run: |
+          bash "${GITHUB_WORKSPACE}/.github/scripts/wait-apprunner-deployment.sh" \
+            "${APPRUNNER_SERVICE_ARN}" \
+            "${OPERATION_ID}"
+
+      - name: Health check
+        env:
+          APPRUNNER_SERVICE_ARN: ${{ inputs.apprunner_service_arn }}
+        run: |
+          service_url="$(aws apprunner describe-service \
+            --service-arn "${APPRUNNER_SERVICE_ARN}" \
+            --query 'Service.ServiceUrl' \
+            --output text)"
+          curl --fail --retry 5 --retry-delay 5 --retry-all-errors \
+            "https://${service_url}/health"
