@@ -39,4 +39,37 @@ To start working with this infrastructure you need:
    - **Turn on bucket versioning** so you can recover from accidental overwrites or mistaken deletes of the state object.
    - **Server-side encryption** for objects in the bucket is also recommended.
 
-Variable files (`*.tfvars`) are ignored by git; keep secrets and account-specific values out of version control.
+Variable files (`*.tfvars`) are ignored by git; keep `env_secret_manager_arn` and secret payloads out of version control.
+
+## Modules overview
+
+| Module | Purpose |
+|--------|---------|
+| `network` | VPC, public/private subnets, security groups for App Runner VPC connector |
+| `db` | DynamoDB tables for URLs and users (GSI keys use `key_schema`, not deprecated `hash_key` / `range_key`) |
+| `ecr` | Container registry, scan-on-push, lifecycle (keep 10 images), optional CI IAM policy |
+| `apprunner` | Public NestJS service, ECR image, auto scaling, VPC connector, IAM, Secrets Manager config |
+
+## Application configuration (Secrets Manager)
+
+Create a **JSON secret in AWS Secrets Manager before** deploying App Runner. Terraform does **not** create the secret. Pass its ARN as `env_secret_manager_arn` in `terraform.tfvars`.
+
+Example secret value:
+
+```json
+{
+  "JWT_SECRET": "your-long-random-string",
+  "DB_ENDPOINT": "https://dynamodb.eu-west-1.amazonaws.com",
+  "URLS_TABLE_NAME": "challenge-staging-urls",
+  "USERS_TABLE_NAME": "challenge-staging-users",
+  "NODE_ENV": "production"
+}
+```
+
+`modules/apprunner` maps keys via `runtime_environment_secrets` only—**no plain environment variables**. Restrict secret access with IAM so only App Runner (and approved operators) can read it.
+
+**Deploy order:**
+- Create/Modify secret
+- Push image to ECR
+- Apply Terraform with `env_secret_manager_arn`. 
+- Health check: `GET /health` on port `3000`.

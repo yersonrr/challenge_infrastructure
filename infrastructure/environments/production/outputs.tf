@@ -38,3 +38,18 @@ output "dynamodb_table_names" {
   description = "DynamoDB table names from the db module."
   value       = module.db.table_names
 }
+
+output "ecr_repository_url" {
+  description = "ECR repository URL for container images."
+  value       = module.ecr.repository_url
+}
+
+output "apprunner_service_url" {
+  description = "Public HTTPS URL of the App Runner service."
+  value       = module.apprunner.service_url
+}
+
+output "env_secret_manager_arn" {
+  description = "Secrets Manager ARN used by App Runner for application configuration."
+  value       = module.apprunner.env_secret_manager_arn
+}
