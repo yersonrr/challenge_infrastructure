@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import type { AppConfig } from '../config/configuration';
+import { normalizeSafeEmail } from '../common/validation/safe-email';
 import type { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { SignUpDto } from './dto/sign-up.dto';
@@ -41,7 +42,7 @@ export class UsersService implements OnModuleInit {
   }
 
   async signUp(dto: SignUpDto): Promise<PublicUser> {
-    const email = dto.email.trim().toLowerCase();
+    const email = normalizeSafeEmail(dto.email);
     const existing = await this.usersRepository.findByEmail(email);
 
     if (existing) {
@@ -61,7 +62,7 @@ export class UsersService implements OnModuleInit {
   }
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {
-    const email = dto.email.trim().toLowerCase();
+    const email = normalizeSafeEmail(dto.email);
     const user = await this.usersRepository.findByEmail(email);
 
     if (!user) {

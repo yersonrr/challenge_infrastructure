@@ -84,7 +84,7 @@ describe('UsersService', () => {
 
       const result = await service.signUp({
         email: 'user@example.com',
-        password: 'password123',
+        password: 'Password1',
       });
 
       expect(result.email).toBe('user@example.com');
@@ -101,7 +101,7 @@ describe('UsersService', () => {
 
       await service.signUp({
         email: '  User@Example.COM  ',
-        password: 'password123',
+        password: 'Password1',
       });
 
       expect(usersRepository.findByEmail).toHaveBeenCalledWith('user@example.com');
@@ -116,13 +116,13 @@ describe('UsersService', () => {
 
       await service.signUp({
         email: 'user@example.com',
-        password: 'password123',
+        password: 'Password1',
       });
 
       const createdUser = usersRepository.create.mock.calls[0][0];
-      expect(createdUser.passwordHash).not.toBe('password123');
+      expect(createdUser.passwordHash).not.toBe('Password1');
       expect(createdUser.passwordHash).toMatch(/^\$2[aby]\$/);
-      await expect(bcrypt.compare('password123', createdUser.passwordHash)).resolves.toBe(
+      await expect(bcrypt.compare('Password1', createdUser.passwordHash)).resolves.toBe(
         true,
       );
     });
@@ -133,7 +133,7 @@ describe('UsersService', () => {
 
       const result = await service.signUp({
         email: 'user@example.com',
-        password: 'password123',
+        password: 'Password1',
       });
 
       expect(result).not.toHaveProperty('passwordHash');
@@ -148,16 +148,27 @@ describe('UsersService', () => {
       });
 
       await expect(
-        service.signUp({ email: 'user@example.com', password: 'password123' }),
+        service.signUp({ email: 'user@example.com', password: 'Password1' }),
       ).rejects.toBeInstanceOf(ConflictException);
 
       expect(usersRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects duplicate email when the transactional create fails', async () => {
+      usersRepository.findByEmail.mockResolvedValue(null);
+      usersRepository.create.mockRejectedValue(
+        new ConflictException('Email is already registered'),
+      );
+
+      await expect(
+        service.signUp({ email: 'user@example.com', password: 'Password1' }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 
   describe('login', () => {
     it('returns a JWT for valid credentials', async () => {
-      const passwordHash = await bcrypt.hash('password123', 4);
+      const passwordHash = await bcrypt.hash('Password1', 4);
       usersRepository.findByEmail.mockResolvedValue({
         userId: 'user-1',
         email: 'user@example.com',
@@ -167,7 +178,7 @@ describe('UsersService', () => {
 
       const result = await service.login({
         email: 'user@example.com',
-        password: 'password123',
+        password: 'Password1',
       });
 
       expect(result.accessToken).toBe('token-123');
@@ -185,7 +196,7 @@ describe('UsersService', () => {
     });
 
     it('normalizes email before lookup', async () => {
-      const passwordHash = await bcrypt.hash('password123', 4);
+      const passwordHash = await bcrypt.hash('Password1', 4);
       usersRepository.findByEmail.mockResolvedValue({
         userId: 'user-1',
         email: 'user@example.com',
@@ -195,7 +206,7 @@ describe('UsersService', () => {
 
       await service.login({
         email: '  User@Example.COM  ',
-        password: 'password123',
+        password: 'Password1',
       });
 
       expect(usersRepository.findByEmail).toHaveBeenCalledWith('user@example.com');
@@ -212,7 +223,7 @@ describe('UsersService', () => {
     });
 
     it('rejects wrong password', async () => {
-      const passwordHash = await bcrypt.hash('other-password', 4);
+      const passwordHash = await bcrypt.hash('OtherPass1', 4);
       usersRepository.findByEmail.mockResolvedValue({
         userId: 'user-1',
         email: 'user@example.com',

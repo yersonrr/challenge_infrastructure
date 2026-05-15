@@ -1,16 +1,21 @@
 import {
   DynamoDBDocumentClient,
   GetCommand,
-  PutCommand,
   QueryCommand,
+  TransactWriteCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/configuration';
 import { DYNAMODB_DOCUMENT_CLIENT } from '../dynamodb/dynamodb.constants';
+import { isTransactionCanceledDueToConditionalCheck } from '../dynamodb/dynamodb-errors';
 import type { UserRecord } from './entities/user.entity';
 
 const EMAIL_INDEX_NAME = 'email-index';
+
+function toEmailLockUserId(email: string): string {
+  return `UNIQUE#EMAIL#${email}`;
+}
 
 @Injectable()
 export class UsersRepository {
@@ -57,21 +62,33 @@ export class UsersRepository {
   async create(user: UserRecord): Promise<void> {
     try {
       await this.documentClient.send(
-        new PutCommand({
-          TableName: this.tableName,
-          Item: user,
-          ConditionExpression: 'attribute_not_exists(userId)',
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Put: {
+                TableName: this.tableName,
+                Item: {
+                  userId: toEmailLockUserId(user.email),
+                  lockUserId: user.userId,
+                },
+                ConditionExpression: 'attribute_not_exists(userId)',
+              },
+            },
+            {
+              Put: {
+                TableName: this.tableName,
+                Item: user,
+                ConditionExpression: 'attribute_not_exists(userId)',
+              },
+            },
+          ],
         }),
       );
     } catch (error: unknown) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        'name' in error &&
-        error.name === 'ConditionalCheckFailedException'
-      ) {
-        throw new ConflictException('User already exists');
+      if (isTransactionCanceledDueToConditionalCheck(error)) {
+        throw new ConflictException('Email is already registered');
       }
+
       throw error;
     }
   }
