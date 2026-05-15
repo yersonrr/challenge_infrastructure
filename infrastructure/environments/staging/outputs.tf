@@ -52,3 +52,8 @@ output "env_secret_manager_arn" {
   description = "Secrets Manager ARN used by App Runner for application configuration."
   value       = module.apprunner.env_secret_manager_arn
 }
+
+output "waf_web_acl_arn" {
+  description = "ARN of the WAF web ACL protecting App Runner."
+  value       = module.security.web_acl_arn
+}

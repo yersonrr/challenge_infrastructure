@@ -49,3 +49,27 @@ variable "apprunner_max_size" {
   type        = number
   default     = 5
 }
+
+variable "waf_rate_limit" {
+  description = "WAF rate limit: max requests per IP per 5-minute window."
+  type        = number
+  default     = 100
+}
+
+variable "waf_enable_ip_reputation" {
+  description = "Enable AWS managed IP reputation WAF rules."
+  type        = bool
+  default     = true
+}
+
+variable "waf_enable_bot_control" {
+  description = "Enable AWS WAF Bot Control (additional cost)."
+  type        = bool
+  default     = false
+}
+
+variable "security_auditor_role_arns" {
+  description = "IAM role ARNs granted read-only WAF and security log access."
+  type        = list(string)
+  default     = []
+}

@@ -49,6 +49,7 @@ Variable files (`*.tfvars`) are ignored by git; keep `env_secret_manager_arn` an
 | `db` | DynamoDB tables for URLs and users (GSI keys use `key_schema`, not deprecated `hash_key` / `range_key`) |
 | `ecr` | Container registry, scan-on-push, lifecycle (keep 10 images), optional CI IAM policy |
 | `apprunner` | Public NestJS service, ECR image, auto scaling, VPC connector, IAM, Secrets Manager config |
+| `security` | Regional WAF on App Runner: rate limit (100 req / 5 min / IP default), IP reputation, optional bot control, logging, auditor IAM |
 
 ## Application configuration (Secrets Manager)
 
