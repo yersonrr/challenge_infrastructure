@@ -8,6 +8,24 @@ The challenge treats **infrastructure as code** with a clear split between **reu
 
 At the **repository root**, the **application** lives alongside `infrastructure/`. It is where **authentication** and **business logic** are implemented. Keeping app and infrastructure in one repository helps align releases, configuration, and IAM expectations.
 
+## Why DynamoDB?
+
+The **`modules/db`** stack uses **Amazon DynamoDB** for the URL shortener and user-authentication data.
+
+**Redirects must stay fast.** Resolving a short link is a single-key lookup (`shortCode` then `longUrl`). DynamoDB is built for that pattern: predictable, low latency reads at scale without connection pooling or query planning overhead. That fits a public redirect endpoint where every extra millisecond matters.
+
+**Operational simplicity for the challenge.** On-demand billing (`PAY_PER_REQUEST`), no VPC database subnets, and no RDS maintenance make it easier to focus on Terraform, App Runner, and the NestJS app. Passwords are stored as hashes in the app (`passwordHash` on each user item); DynamoDB only persists the result.
+
+### Future work (PostgreSQL)
+
+DynamoDB is a deliberate starting point, not a permanent solution. **PostgreSQL** should be used(for example RDS or Aurora) if requirements grow:
+
+| Area | Stay on DynamoDB | Consider PostgreSQL |
+|------|------------------|---------------------|
+| **URL redirects** | High-volume, simple key lookups | Not the best approach if we want to read the table and stay consistent for Millions of URLs. |
+| **Users & auth** | Fine for the initial sign-up/login setup | Better fit for complex roles, audits, migrations, and SQL queries across users and sessions. |
+| **URLs (for management)** | Owner listing via GSI works for moderate scale | Better for admin dashboards, analytics joins (user, link, click), and constraints across tables |
+
 ## Before deploying Terraform
 
 To start working with this infrastructure you need:
