@@ -57,3 +57,18 @@ output "waf_web_acl_arn" {
   description = "ARN of the WAF web ACL protecting App Runner."
   value       = module.security.web_acl_arn
 }
+
+output "github_terraform_oidc_role_arn" {
+  description = "GitHub OIDC role ARN (assume this first in Actions, then chain to terraform_deployment_role_arn)."
+  value       = module.iam_github.github_terraform_oidc_role_arn
+}
+
+output "terraform_deployment_role_arn" {
+  description = "Terraform apply role ARN for GitHub Actions (AssumeRole target)."
+  value       = module.iam_github.terraform_deployment_role_arn
+}
+
+output "github_ecr_oidc_role_arn" {
+  description = "GitHub OIDC role ARN for ECR image push."
+  value       = module.iam_github.github_ecr_oidc_role_arn
+}

@@ -21,8 +21,25 @@ variable "role_arn" {
   type        = string
 }
 
+variable "github_repository" {
+  description = "GitHub repository allowed to use OIDC (org/repo)."
+  type        = string
+}
+
+variable "github_branches" {
+  description = "Git branches allowed to assume GitHub OIDC roles."
+  type        = list(string)
+  default     = ["main", "staging"]
+}
+
+variable "terraform_state_bucket_name" {
+  description = "S3 bucket for Terraform remote state (must match backend bucket)."
+  type        = string
+  default     = "challenge-terraform-states"
+}
+
 variable "ecr_ci_role_arns" {
-  description = "IAM role ARNs for CI/CD to push images to ECR (optional)."
+  description = "Extra IAM role ARNs for ECR push (optional; GitHub OIDC ECR role is configured in iam_github)."
   type        = list(string)
   default     = []
 }

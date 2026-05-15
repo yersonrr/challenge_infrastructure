@@ -50,6 +50,69 @@ Variable files (`*.tfvars`) are ignored by git; keep `env_secret_manager_arn` an
 | `ecr` | Container registry, scan-on-push, lifecycle (keep 10 images), optional CI IAM policy |
 | `apprunner` | Public NestJS service, ECR image, auto scaling, VPC connector, IAM, Secrets Manager config |
 | `security` | Regional WAF on App Runner: rate limit (100 req / 5 min / IP default), IP reputation, optional bot control, logging, auditor IAM |
+| `iam_github` | GitHub OIDC provider, OIDC roles, Terraform deployment role (AssumeRole chain), scoped ECR push role |
+
+## GitHub Actions (OIDC)
+
+`modules/iam_github` configures **GitHub OIDC and AssumeRole**. Each environment (**staging** and **production**) creates its **own IAM roles** with different ARNs. After `terraform apply` in each environment folder, read the outputs and configure GitHub accordingly.
+
+### GitHub variables (per environment)
+
+Use **separate values for staging and production**. Do not reuse the same role ARNs across environments.
+
+| GitHub variable (suggested name) | Terraform output | Used for |
+|----------------------------------|------------------|----------|
+| `GITHUB_ECR_ROLE_ARN` | `github_ecr_oidc_role_arn` | Docker build & push to that env’s ECR repo |
+| `GITHUB_TERRAFORM_OIDC_ROLE_ARN` | `github_terraform_oidc_role_arn` | First OIDC login in the Terraform job |
+| `TERRAFORM_DEPLOYMENT_ROLE_ARN` | `terraform_deployment_role_arn` | `terraform apply` (AssumeRole target) |
+
+**Where to set them**
+
+- **GitHub Environments** (`staging`, `production`) recommended: each environment has its own variable values so workflows targeting `environment: staging` never get production ARNs.
+- Or **repository variables** with names like `STAGING_TERRAFORM_DEPLOYMENT_ROLE_ARN` and `PRODUCTION_TERRAFORM_DEPLOYMENT_ROLE_ARN` if you branch in the workflow with `if:` / matrix.
+
+Example (after apply in `infrastructure/environments/staging`):
+
+```bash
+terraform output github_ecr_oidc_role_arn
+terraform output github_terraform_oidc_role_arn
+terraform output terraform_deployment_role_arn
+```
+
+Repeat in `infrastructure/environments/production` — the ARNs will differ (roles are named `challenge-staging-*` vs `challenge-production-*`).
+
+### Role summary
+
+1. **`github_terraform_oidc_role_arn`** — federated trust for repo/branches/environments; may only `sts:AssumeRole` into the deployment role.
+2. **`terraform_deployment_role_arn`** — runs `terraform apply` with least-privilege policies scoped to `${project}-${environment}-*` resources and the state bucket prefix.
+3. **`github_ecr_oidc_role_arn`** — push images to that environment’s ECR repository only.
+
+Example workflow steps:
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+
+# Use environment: staging | production so vars.* resolve to the correct ARNs
+# ECR push job
+- uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: ${{ vars.GITHUB_ECR_ROLE_ARN }}
+    aws-region: eu-west-1
+
+# Terraform job (chain to deployment role)
+- uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: ${{ vars.GITHUB_TERRAFORM_OIDC_ROLE_ARN }}
+    aws-region: eu-west-1
+- run: |
+    CREDS=$(aws sts assume-role --role-arn ${{ vars.TERRAFORM_DEPLOYMENT_ROLE_ARN }} --role-session-name terraform)
+    export AWS_ACCESS_KEY_ID=...
+    terraform apply
+```
+
+OIDC trust for each role also includes `repo:ORG/REPO:environment:staging` or `environment:production` (see `github_environments` in `iam_github.tf`), so workflows should set `environment:` in the job to match the target account/roles.
 
 ## Application configuration (Secrets Manager)
 
