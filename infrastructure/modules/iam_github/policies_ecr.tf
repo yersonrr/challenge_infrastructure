@@ -42,4 +42,19 @@ data "aws_iam_policy_document" "github_ecr" {
       values   = [local.account_id]
     }
   }
+
+  dynamic "statement" {
+    for_each = length(var.apprunner_service_arns) > 0 ? [1] : []
+
+    content {
+      sid    = "AppRunnerDeploy"
+      effect = "Allow"
+      actions = [
+        "apprunner:DescribeService",
+        "apprunner:ListOperations",
+        "apprunner:StartDeployment",
+      ]
+      resources = var.apprunner_service_arns
+    }
+  }
 }

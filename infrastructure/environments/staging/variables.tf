@@ -29,7 +29,7 @@ variable "github_repository" {
 variable "github_branches" {
   description = "Git branches allowed to assume GitHub OIDC roles."
   type        = list(string)
-  default     = ["main", "staging"]
+  default     = ["staging"]
 }
 
 variable "terraform_state_bucket_name" {

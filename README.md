@@ -114,6 +114,43 @@ permissions:
 
 OIDC trust for each role also includes `repo:ORG/REPO:environment:staging` or `environment:production` (see `github_environments` in `iam_github.tf`), so workflows should set `environment:` in the job to match the target account/roles.
 
+### Application workflow (`application.yml` → `application-reusable.yml`)
+
+Runs on pushes to **`staging`** or **`production`** when files under `application/` change. The caller workflow maps **repository variables** by branch, then invokes the reusable workflow with explicit inputs.
+
+1. **resolve-config** — selects `STAGING_*` or `PRODUCTION_*` vars from the branch name
+2. **Test and Prettier** — `pnpm test` and `pnpm run format:check`
+3. **Deploy** — build/push Docker image to ECR (`latest` + commit SHA tags)
+4. **App Runner** — `start-deployment`, wait for success, `GET /health`
+
+Set these as **repository variables** (Settings → Secrets and variables → Actions → Variables):
+
+| Repository variable | Terraform output (staging folder) | Terraform output (production folder) |
+|---------------------|-----------------------------------|--------------------------------------|
+| `STAGING_GITHUB_ECR_ROLE_ARN` | `github_ecr_oidc_role_arn` | — |
+| `STAGING_ECR_REPOSITORY_URL` | `ecr_repository_url` | — |
+| `STAGING_APPRUNNER_SERVICE_ARN` | `apprunner_service_arn` | — |
+| `STAGING_AWS_REGION` (optional) | `region` | — |
+| `PRODUCTION_GITHUB_ECR_ROLE_ARN` | — | `github_ecr_oidc_role_arn` |
+| `PRODUCTION_ECR_REPOSITORY_URL` | — | `ecr_repository_url` |
+| `PRODUCTION_APPRUNNER_SERVICE_ARN` | — | `apprunner_service_arn` |
+| `PRODUCTION_AWS_REGION` (optional) | — | `region` |
+
+Optional fallback for region: `AWS_REGION` (used when `STAGING_AWS_REGION` / `PRODUCTION_AWS_REGION` are unset). Default in the workflow: `eu-west-1`.
+
+The deploy job still sets `environment: staging` or `production` for GitHub Environment protection rules and OIDC `environment:` claims.
+
+After updating IAM (App Runner deploy permissions on the ECR OIDC role), run `terraform apply` in that environment.
+
+### Pre-commit
+
+```bash
+pip install pre-commit   # or: brew install pre-commit
+pre-commit install
+```
+
+Hooks: Terraform `validate` (staging + production when `infrastructure/` changes), application Prettier check, and Jest tests.
+
 ## Application configuration (Secrets Manager)
 
 Create a **JSON secret in AWS Secrets Manager before** deploying App Runner. Terraform does **not** create the secret. Pass its ARN as `env_secret_manager_arn` in `terraform.tfvars`.

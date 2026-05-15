@@ -76,6 +76,12 @@ variable "enable_ecr_role" {
   default     = true
 }
 
+variable "apprunner_service_arns" {
+  description = "App Runner service ARNs the GitHub ECR role may deploy (start-deployment, describe)."
+  type        = list(string)
+  default     = []
+}
+
 variable "tags" {
   description = "Additional tags for IAM resources."
   type        = map(string)

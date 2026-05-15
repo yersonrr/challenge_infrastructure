@@ -1,0 +1,30 @@
+repos:
+  - repo: local
+    hooks:
+      - id: terraform-validate-staging
+        name: terraform validate (staging)
+        entry: bash -c 'cd infrastructure/environments/staging && terraform init -backend=false -input=false >/dev/null && terraform validate'
+        language: system
+        files: ^infrastructure/
+        pass_filenames: false
+
+      - id: terraform-validate-production
+        name: terraform validate (production)
+        entry: bash -c 'cd infrastructure/environments/production && terraform init -backend=false -input=false >/dev/null && terraform validate'
+        language: system
+        files: ^infrastructure/
+        pass_filenames: false
+
+      - id: application-prettier
+        name: prettier (application)
+        entry: bash -c 'cd application/url-shortener && pnpm run format:check'
+        language: system
+        files: ^application/url-shortener/.*\.ts$
+        pass_filenames: false
+
+      - id: application-test
+        name: jest (application)
+        entry: bash -c 'cd application/url-shortener && pnpm test'
+        language: system
+        files: ^application/url-shortener/
+        pass_filenames: false

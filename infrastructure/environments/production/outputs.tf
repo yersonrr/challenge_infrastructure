@@ -49,6 +49,11 @@ output "apprunner_service_url" {
   value       = module.apprunner.service_url
 }
 
+output "apprunner_service_arn" {
+  description = "ARN of the App Runner service (for GitHub Actions deployment checks)."
+  value       = module.apprunner.service_arn
+}
+
 output "env_secret_manager_arn" {
   description = "Secrets Manager ARN used by App Runner for application configuration."
   value       = module.apprunner.env_secret_manager_arn

@@ -13,4 +13,5 @@ module "iam_github" {
 
   terraform_state_bucket_name = var.terraform_state_bucket_name
   ecr_repository_arns         = [module.ecr.repository_arn]
+  apprunner_service_arns      = [module.apprunner.service_arn]
 }
