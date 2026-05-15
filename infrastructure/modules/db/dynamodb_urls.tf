@@ -36,9 +36,17 @@ resource "aws_dynamodb_table" "urls" {
     for_each = var.enable_urls_owner_gsi ? [1] : []
     content {
       name            = "ownerId-createdAt-index"
-      hash_key        = "ownerId"
-      range_key       = "createdAt"
       projection_type = "ALL"
+
+      key_schema {
+        attribute_name = "ownerId"
+        key_type       = "HASH"
+      }
+
+      key_schema {
+        attribute_name = "createdAt"
+        key_type       = "RANGE"
+      }
 
       read_capacity  = try(local.provisioned_capacity.read_capacity, null)
       write_capacity = try(local.provisioned_capacity.write_capacity, null)

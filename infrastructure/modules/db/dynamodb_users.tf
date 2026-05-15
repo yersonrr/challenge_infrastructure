@@ -29,6 +29,11 @@ resource "aws_dynamodb_table" "users" {
       name            = "email-index"
       projection_type = "ALL"
 
+      key_schema {
+        attribute_name = "email"
+        key_type       = "HASH"
+      }
+
       read_capacity  = try(local.provisioned_capacity.read_capacity, null)
       write_capacity = try(local.provisioned_capacity.write_capacity, null)
     }

@@ -1,0 +1,6 @@
+role_arn   = "arn:aws:iam::ACCOUNT_ID:role/YourTerraformRole"
+jwt_secret = "change-me-use-a-long-random-string"
+
+# Optional
+# ecr_ci_role_arns = ["arn:aws:iam::ACCOUNT_ID:role/YourGitHubActionsRole"]
+# app_image_tag    = "latest"
